@@ -5,24 +5,8 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include <time.h>
 #include "common.h"
-
-#define MAX_BUFFER 256
-#define MAXPATH 1024
-
-typedef struct
-{
-    char *cur_dir;
-} dir_info;
-
-typedef struct
-{
-    char **content;
-    struct tm time;
-    int fail;
-    u_int64_t pid;
-} Cmd;
+#include "local.h"
 
 void fetch_bin()
 {
@@ -51,7 +35,7 @@ void fetch_bin()
     free(path_list);
 }
 
-char *parse_command(Cmd *cmd, int nb_tokens)
+char *parse_command(Cmd *cmd, int nb_tokens, dir_info *d)
 {
     if (strcmp(cmd->content[0], "exit") == 0)
     {
@@ -60,18 +44,15 @@ char *parse_command(Cmd *cmd, int nb_tokens)
          *  later on, should check if there is no running processes before exiting
          */
     }
-    // for (int i = 0; i < nb_tokens; i++)
-    // {
-    // }
+    else if (strcmp(cmd->content[0], "cd") == 0)
+    {
+        cd(cmd->content, d, nb_tokens);
+    }
 }
 
 Cmd *store_command(char *cmd, size_t input_size, int *nb_token)
 {
-    // TODO: should implement a tokenizer to parse the input
-    /*
-     * first check if the command is a local one (exit, cd, ect...)
-     * or else load it from /usr/bin or for PATH
-     */
+
     char **tokens = NULL;
     char buffer[MAX_BUFFER];
     int buffer_index = 0;
@@ -99,9 +80,9 @@ Cmd *store_command(char *cmd, size_t input_size, int *nb_token)
             index++;
             continue;
         }
-        if (isalpha(currentChar))
+        if (isalpha(currentChar) || currentChar == '.' || currentChar == '/' || currentChar == '-' || currentChar == '_' )
         {
-            while (isalnum(cmd[index]) || cmd[index] == '_' || isalpha(cmd[index]))
+            while (isalnum(cmd[index]) || cmd[index] == '_' || cmd[index] == '.' || cmd[index] == '-' || cmd[index] == '_' || cmd[index] == '/')
             {
                 buffer[buffer_index++] = cmd[index++];
             }
@@ -114,7 +95,12 @@ Cmd *store_command(char *cmd, size_t input_size, int *nb_token)
             (*nb_token)++;
             continue;
         }
-
+        buffer[buffer_index++] = currentChar;
+        buffer[buffer_index] = '\0';
+        tokens = realloc(tokens, (*nb_token + 1) * sizeof(char *));
+        tokens[*nb_token] = strdup(buffer);
+        (*nb_token)++;
+        buffer_index = 0;
         index++;
     }
 
@@ -140,61 +126,65 @@ int main()
     int nb_token = 0;
 
     dir_info *d = malloc(sizeof(dir_info));
-    char buffer[MAX_BUFFER];
-    if (getcwd(buffer, MAX_BUFFER) == NULL)
-    {
-        fprintf(stderr, "Cannot get current working directory path\n");
-        if (errno == ERANGE)
-        {
-            fprintf(stderr, "Buffer size is too small.\n");
-        }
-        exit(EXIT_FAILURE);
-    }
-    d->cur_dir = malloc(sizeof(char));
+    size_t path_size = pathconf(".", _PC_PATH_MAX);
+    char buffer[path_size];
+
+    d->cur_dir = (char *)malloc((size_t)path_size);
     if (d->cur_dir == NULL)
     {
-        fprintf(stderr, "Memory allocation error.\n");
+        perror("malloc failed");
+        exit(EXIT_FAILURE);
     }
-    d->cur_dir = strdup(buffer);
-
     while (1)
     {
+        if (getcwd(d->cur_dir, path_size) == NULL)
+        {
+            perror("Impossible d'obtenir le répertoire de travail actuel");
+            exit(EXIT_FAILURE);
+        }
+
         fprintf(stdout, "\n%s ", d->cur_dir);
         fprintf(stdout, " > ");
 
         ssize_t read_bytes = getline(&input, &input_size, stdin);
 
-        if (read_bytes == -1) {
+        if (read_bytes == -1)
+        {
             perror("getline");
             exit(EXIT_FAILURE);
         }
 
-        if (read_bytes > 0 && input[read_bytes - 1] == '\n') {
+        if (read_bytes > 0 && input[read_bytes - 1] == '\n')
+        {
             input[read_bytes - 1] = '\0';
             read_bytes--;
         }
 
-        if (read_bytes == 0) {
+        if (read_bytes == 0)
+        {
             continue;
         }
 
         Cmd *cmd = store_command(input, input_size, &nb_token);
-        parse_command(cmd, nb_token);
+        parse_command(cmd, nb_token, d);
 
-        for (int i = 0; i < nb_token; i++) {
+        for (int i = 0; i < nb_token; i++)
+        {
             printf("%s", cmd->content[i]);
         }
 
         printf("%d-%02d-%02d %02d:%02d:%02d", cmd->time.tm_year + 1900, cmd->time.tm_mon + 1, cmd->time.tm_mday, cmd->time.tm_hour, cmd->time.tm_min, cmd->time.tm_sec);
 
-        for (int i = 0; i < nb_token; i++) {
+        for (int i = 0; i < nb_token; i++)
+        {
             free(cmd->content[i]);
         }
-
         free(cmd->content);
         free(cmd);
     }
-    //fetch_bin();
+    free(d->cur_dir);
+    free(d);
+
     free(input);
 
     return 0;
