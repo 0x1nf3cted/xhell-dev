@@ -51,12 +51,19 @@ void fetch_bin()
     free(path_list);
 }
 
-// char *parse_command(Cmd *cmd, int nb_tokens)
-// {
-//     for (int i = 0; i < nb_tokens; i++)
-//     {
-//     }
-// }
+char *parse_command(Cmd *cmd, int nb_tokens)
+{
+    if (strcmp(cmd->content[0], "exit") == 0)
+    {
+        exit(0); // for now
+        /*
+         *  later on, should check if there is no running processes before exiting
+         */
+    }
+    // for (int i = 0; i < nb_tokens; i++)
+    // {
+    // }
+}
 
 Cmd *store_command(char *cmd, size_t input_size, int *nb_token)
 {
@@ -157,35 +164,37 @@ int main()
 
         ssize_t read_bytes = getline(&input, &input_size, stdin);
 
-        if (read_bytes == -1)
-        {
+        if (read_bytes == -1) {
             perror("getline");
             exit(EXIT_FAILURE);
         }
 
-        if (read_bytes > 0 && input[read_bytes - 1] == '\n')
-        {
+        if (read_bytes > 0 && input[read_bytes - 1] == '\n') {
             input[read_bytes - 1] = '\0';
             read_bytes--;
         }
 
-        if (read_bytes == 0)
-        {
+        if (read_bytes == 0) {
             continue;
         }
+
         Cmd *cmd = store_command(input, input_size, &nb_token);
-        for (int i = 0; i < nb_token; i++)
-        {
+        parse_command(cmd, nb_token);
+
+        for (int i = 0; i < nb_token; i++) {
             printf("%s", cmd->content[i]);
         }
+
         printf("%d-%02d-%02d %02d:%02d:%02d", cmd->time.tm_year + 1900, cmd->time.tm_mon + 1, cmd->time.tm_mday, cmd->time.tm_hour, cmd->time.tm_min, cmd->time.tm_sec);
 
-        for (int i = 0; i < nb_token; i++)
-        {
-            free((void *)cmd->content[i]);
+        for (int i = 0; i < nb_token; i++) {
+            free(cmd->content[i]);
         }
+
+        free(cmd->content);
+        free(cmd);
     }
-    fetch_bin();
+    //fetch_bin();
     free(input);
 
     return 0;
