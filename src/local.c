@@ -4,57 +4,65 @@ void remove_last(char *path)
 {
     int bound = 0;
 
-    // Find the last '/' in the path
     for (int i = strlen(path) - 1; i >= 0; i--)
     {
         if (path[i] == '/')
         {
             bound = i;
-            break; // Exit the loop when the last '/' is found
+            break;
         }
     }
 
-    // Handle the case where there is no '/' in the path
     if (bound == 0)
     {
-        // Modify the path to be "/"
         strcpy(path, "/");
         return;
     }
 
-    // Null-terminate the path at the last '/'
     path[bound] = '\0';
 }
 
-void remove_prefix(char *path)
+static char *concat_strings(char **array, int size)
 {
-    int bound = 0;
-
-    // Find the last '/' in the path
-    for (int i = strlen(path) - 1; i >= 0; i--)
+    int total_length = 0;
+    for (int i = 0; i < size; i++)
     {
-        if (path[i] == '/')
+        total_length += strlen(array[i]);
+    }
+
+    char *result = (char *)malloc(total_length + 1);
+    if (result == NULL)
+    {
+        perror("Memory allocation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    result[0] = '\0';
+    for (int i = 0; i < size; i++)
+    {
+        if (strcmp(array[i], "..") != 0)
         {
-            bound = i + 1;
-            break; // Exit the loop when the last '/' is found
+            strcat(result, array[i]);
         }
     }
 
-    if (bound == 0)
-    {
-        strcpy(path, "");
-    }
-    else
-    {
-        // Shift the characters in the path to remove the prefix
-        for (int i = 0; i < strlen(path) - bound; i++)
-        {
-            path[i] = path[i + bound];
-        }
+    return result;
+}
 
-        // Null-terminate the modified path
-        path[strlen(path) - bound] = '\0';
+char *remove_prefix(char *path)
+{
+    char *token;
+    char **p_list = NULL;
+    int n = 0;
+    token = strtok(path, "/");
+    while (token != NULL)
+    {
+        p_list = realloc(p_list, (n + 1) * sizeof(char *));
+        p_list[n] = strdup(token);
+        token = strtok(NULL, "/");
     }
+
+    concat_strings(p_list, n + 1);
 }
 
 void cd(char **content, dir_info *cur_dir, int nb_tokens)
@@ -64,7 +72,6 @@ void cd(char **content, dir_info *cur_dir, int nb_tokens)
 
     if (nb_tokens == 1)
     {
-        // Change to the default directory if no path is provided
         chdir("/home/moussacodes");
     }
     else
@@ -78,8 +85,7 @@ void cd(char **content, dir_info *cur_dir, int nb_tokens)
         }
 
         printf("\npath: %s\n", path);
-        int index = 0; // Initialize index
-
+        int index = 0;
         while (path[index] != '\0')
         {
             if (path[index] == '.')
@@ -88,31 +94,32 @@ void cd(char **content, dir_info *cur_dir, int nb_tokens)
                 {
                     if (path[index + 2] == '/' || path[index + 2] == '\0')
                     {
-                        remove_last(cur_dir->cur_dir); // Go back one folder
+                        remove_last(cur_dir->cur_dir);
                         chdir(cur_dir->cur_dir);
 
                         if (path[index + 2] == '/')
                         {
-                            index += 3; // Move past "../"
+                            index += 3;
                         }
                         else
                         {
-                            index += 2; // Move past ".."
+                            index += 2;
                         }
                     }
                     else
                     {
                         perror("Error: wrong input");
-                        free(path); // Free the allocated memory
+                        free(path);
                         exit(EXIT_FAILURE);
                     }
                 }
             }
-            else if (path[index] == '/') // Use single quotes for character comparison
+            else if (path[index] == '/')
             {
                 if (strlen(path) == 1)
                 {
                     chdir("/");
+                    index++;
                 }
                 else if (path[index + 1] == '.')
                 {
@@ -121,34 +128,32 @@ void cd(char **content, dir_info *cur_dir, int nb_tokens)
                 else
                 {
                     chdir(path);
+                    index++;
                 }
             }
             else
             {
-                // Construct the new path by concatenating cur_dir->cur_dir, "/", and path
                 snprintf(prefix, sizeof(prefix), "%s/%s", cur_dir->cur_dir, path);
-
-                // Use chdir with the new_path
-                if (chdir(prefix) != 0)
+                char *new_p = remove_prefix(prefix);
+                printf("new:  %s", new_p);
+                if (chdir(new_p) != 0)
                 {
                     perror("Error: chdir failed");
-                    free(path);
+                    free(new_p);
                     exit(EXIT_FAILURE);
                 }
 
-                // Skip to the next segment of the path
-                while (path[index] != '\0' && path[index] != '/')
+                 while (path[index] != '\0' && path[index] != '/')
                 {
                     index++;
                 }
             }
         }
 
-        free(path); // Free the allocated memory
+        free(path);  
     }
 
-    // Update cur_dir->cur_dir with the current working directory
-    if (getcwd(cur_dir->cur_dir, MAX_BUFFER) == NULL)
+     if (getcwd(cur_dir->cur_dir, MAX_BUFFER) == NULL)
     {
         perror("Error: Cannot get current working directory path");
         exit(EXIT_FAILURE);
