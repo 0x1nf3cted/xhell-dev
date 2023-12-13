@@ -12,6 +12,7 @@
 
 #define MAX_BUFFER 256
 #define MAXPATH 1024
+#define clear() printf("\033[H\033[J")
 
 
 #define IS_PIPE_OPRATOR(CH) ( \

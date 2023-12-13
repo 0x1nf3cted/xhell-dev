@@ -40,13 +40,14 @@ char *parse_command(Cmd *cmd, int nb_tokens, dir_info *d)
     if (strcmp(cmd->content[0], "exit") == 0)
     {
         exit(0); // for now
-        /*
-         *  later on, should check if there is no running processes before exiting
-         */
     }
     else if (strcmp(cmd->content[0], "cd") == 0)
     {
         cd(cmd->content, d, nb_tokens);
+    }
+    else if (strcmp(cmd->content[0], "clear") == 0)
+    {
+        clear();
     }
 }
 
@@ -80,7 +81,7 @@ Cmd *store_command(char *cmd, size_t input_size, int *nb_token)
             index++;
             continue;
         }
-        if (isalpha(currentChar) || currentChar == '.' || currentChar == '/' || currentChar == '-' || currentChar == '_' )
+        if (isalpha(currentChar) || currentChar == '.' || currentChar == '/' || currentChar == '-' || currentChar == '_')
         {
             while (isalnum(cmd[index]) || cmd[index] == '_' || cmd[index] == '.' || cmd[index] == '-' || cmd[index] == '_' || cmd[index] == '/')
             {
@@ -143,7 +144,7 @@ int main()
             exit(EXIT_FAILURE);
         }
 
-        fprintf(stdout, "\n%s ", d->cur_dir);
+        fprintf(stdout, "%s ", d->cur_dir);
         fprintf(stdout, " > ");
 
         ssize_t read_bytes = getline(&input, &input_size, stdin);
@@ -167,13 +168,6 @@ int main()
 
         Cmd *cmd = store_command(input, input_size, &nb_token);
         parse_command(cmd, nb_token, d);
-
-        for (int i = 0; i < nb_token; i++)
-        {
-            printf("%s", cmd->content[i]);
-        }
-
-        printf("%d-%02d-%02d %02d:%02d:%02d", cmd->time.tm_year + 1900, cmd->time.tm_mon + 1, cmd->time.tm_mday, cmd->time.tm_hour, cmd->time.tm_min, cmd->time.tm_sec);
 
         for (int i = 0; i < nb_token; i++)
         {
