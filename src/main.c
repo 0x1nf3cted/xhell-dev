@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <dirent.h>
+#include <signal.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -8,9 +10,10 @@
 #include "common.h"
 #include "local.h"
 
-void fetch_bin()
+int fetch_bin(char *bin)
 {
     char sPath[MAXPATH] = "";
+    char binary_p[MAXPATH] = "";
     char *pTmp;
     char **path_list = NULL;
     int n_path = 0;
@@ -25,17 +28,82 @@ void fetch_bin()
     {
         path_list = realloc(path_list, (n_path + 1) * sizeof(char *));
         path_list[n_path] = strdup(token);
-        printf(" %s\n", token);
+        n_path++;
         token = strtok(NULL, ":");
     }
+    DIR *d;
+    struct dirent *dir;
+
     for (int i = 0; i < n_path; i++)
     {
-        printf("%s", path_list[i]);
+        d = opendir(path_list[i]);
+        if (d == NULL)
+            return;
+
+        // while ((dir = readdir(d)) != NULL)
+        // {
+        //     if (strcmp(dir->d_name, bin) == 0)
+        //     {
+        //         snprintf(binary_p, sizeof(binary_p), "%s/%s", path_list[i], bin);
+        //         pid_t p = fork();
+        //         if (p < 0)
+        //         {
+        //             perror("fork fail");
+        //             exit(1);
+        //         }
+        //         char *const argv[] = {binary_p, "-l", NULL};
+        //         execvp(binary_p, argv);
+        //         waitpid(p, NULL, 0);
+        //         kill(p, SIGKILL);
+        //         closedir(d);
+        //         return 0;
+        //     }
+        // }
+        // closedir(d);
+
+        while ((dir = readdir(d)) != NULL)
+        {
+            if (strcmp(dir->d_name, bin) == 0)
+            {
+                char binary_p[1000];
+                snprintf(binary_p, sizeof(binary_p), "%s/%s", path_list[i], bin);
+                pid_t p = fork();
+                if (p < 0)
+                {
+                    perror("fork fail");
+                    exit(1);
+                }
+                else if (p == 0)
+                {
+                    char *const argv[] = {binary_p, NULL};
+                    execvp(binary_p, argv);
+                    perror("execvp");
+                    exit(1);
+                }
+                else
+                {
+                    // Parent process
+                    int status;
+                    waitpid(p, &status, 0);
+
+                    if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+                    {
+                        // Child process exited successfully
+                        printf("Child process exited successfully.\n");
+                    }
+                    else
+                    {
+                        // Child process encountered an error or was killed
+                        printf("Child process encountered an error or was killed.\n");
+                    }
+                }
+            }
+        }
+        closedir(d);
     }
-    free(path_list);
 }
 
-char *parse_command(Cmd *cmd, int nb_tokens, dir_info *d)
+int parse_command(Cmd *cmd, int nb_tokens, dir_info *d)
 {
     if (strcmp(cmd->content[0], "exit") == 0)
     {
@@ -44,10 +112,16 @@ char *parse_command(Cmd *cmd, int nb_tokens, dir_info *d)
     else if (strcmp(cmd->content[0], "cd") == 0)
     {
         cd(cmd->content, d, nb_tokens);
+        return 0;
     }
     else if (strcmp(cmd->content[0], "clear") == 0)
     {
         clear();
+        return 0;
+    }
+    else
+    {
+        fetch_bin(cmd->content[0]);
     }
 }
 
