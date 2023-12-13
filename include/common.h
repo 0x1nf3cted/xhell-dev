@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <time.h>
+#include <sys/types.h>
 
 
 #define MAX_BUFFER 256

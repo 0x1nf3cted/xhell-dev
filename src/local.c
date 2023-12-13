@@ -22,48 +22,75 @@ void remove_last(char *path)
     path[bound] = '\0';
 }
 
-static char *concat_strings(char **array, int size)
-{
-    int total_length = 0;
-    for (int i = 0; i < size; i++)
-    {
-        total_length += strlen(array[i]);
-    }
 
-    char *result = (char *)malloc(total_length + 1);
-    if (result == NULL)
-    {
-        perror("Memory allocation failed");
-        exit(EXIT_FAILURE);
-    }
+char* fixPath(const char* path) {
+    // Copier la chaîne d'entrée pour la modification
+    char modifiedPath[strlen(path) + 1];
+    strcpy(modifiedPath, path);
 
-    result[0] = '\0';
-    for (int i = 0; i < size; i++)
-    {
-        if (strcmp(array[i], "..") != 0)
-        {
-            strcat(result, array[i]);
+    // Trouver et supprimer les occurrences de "../"
+    char* prevOccurrence = NULL;
+    char* occurrence = strstr(modifiedPath, "../");
+    while (occurrence != NULL) {
+        // S'assurer que l'occurrence se trouve au début de la chaîne
+        if (occurrence == modifiedPath || *(occurrence - 1) == '/') {
+            // Supprimer l'occurrence de "../"
+            memmove(occurrence, occurrence + 3, strlen(occurrence + 3) + 1);
+
+            // Rechercher la prochaine occurrence
+            prevOccurrence = occurrence;
+            occurrence = strstr(modifiedPath, "../");
+        } else {
+            // Si l'occurrence n'est pas au début, passer à la suite
+            occurrence = strstr(occurrence + 1, "../");
         }
     }
 
-    return result;
+    // Vous pouvez maintenant utiliser modifiedPath comme chemin corrigé
+    return strdup(modifiedPath);
 }
 
-char *remove_prefix(char *path)
-{
-    char *token;
-    char **p_list = NULL;
-    int n = 0;
-    token = strtok(path, "/");
-    while (token != NULL)
-    {
-        p_list = realloc(p_list, (n + 1) * sizeof(char *));
-        p_list[n] = strdup(token);
-        token = strtok(NULL, "/");
-    }
+// static char *concat_strings(char **array, int size)
+// {
+//     int total_length = 0;
+//     for (int i = 0; i < size; i++)
+//     {
+//         total_length += strlen(array[i]);
+//     }
 
-    concat_strings(p_list, n + 1);
-}
+//     char *result = (char *)malloc(total_length + 1);
+//     if (result == NULL)
+//     {
+//         perror("Memory allocation failed");
+//         exit(EXIT_FAILURE);
+//     }
+
+//     result[0] = '\0';
+//     for (int i = 0; i < size; i++)
+//     {
+//         if (strcmp(array[i], "..") != 0)
+//         {
+//             strcat(result, array[i]);
+//         }
+//     }
+//     return result;
+// }
+
+// char *remove_prefix(char *path)
+// {
+//     char *token;
+//     char **p_list = NULL;
+//     int n = 0;
+//     token = strtok(path, "/");
+//     while (token != NULL)
+//     {
+//         p_list = realloc(p_list, (n + 1) * sizeof(char *));
+//         p_list[n] = strdup(token);
+//         token = strtok(NULL, "/");
+//     }
+
+//     concat_strings(p_list, n + 1);
+// }
 
 void cd(char **content, dir_info *cur_dir, int nb_tokens)
 {
@@ -133,27 +160,40 @@ void cd(char **content, dir_info *cur_dir, int nb_tokens)
             }
             else
             {
+                printf("%s", path);
                 snprintf(prefix, sizeof(prefix), "%s/%s", cur_dir->cur_dir, path);
-                char *new_p = remove_prefix(prefix);
-                printf("new:  %s", new_p);
-                if (chdir(new_p) != 0)
+                if (strstr(path, "..") == NULL)
                 {
-                    perror("Error: chdir failed");
-                    free(new_p);
-                    exit(EXIT_FAILURE);
+                    printf("new no: :  %s", path);
+                    if (chdir(prefix) != 0)
+                    {
+                        perror("Error: chdir failed");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else
+                {
+                    char *new_p = fixPath(prefix);
+                    printf("new with ::  %s", new_p);
+                    if (chdir(new_p) != 0)
+                    {
+                        perror("Error: chdir failed");
+                        free(new_p);
+                        exit(EXIT_FAILURE);
+                    }
                 }
 
-                 while (path[index] != '\0' && path[index] != '/')
+                while (path[index] != '\0' && path[index] != '/')
                 {
                     index++;
                 }
             }
         }
 
-        free(path);  
+        free(path);
     }
 
-     if (getcwd(cur_dir->cur_dir, MAX_BUFFER) == NULL)
+    if (getcwd(cur_dir->cur_dir, MAX_BUFFER) == NULL)
     {
         perror("Error: Cannot get current working directory path");
         exit(EXIT_FAILURE);
