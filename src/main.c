@@ -5,165 +5,104 @@
 #include <errno.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include "common.h"
 #include "local.h"
 #include "exec.h"
 #include "completions.h"
 
-int parse_command(Cmd *cmd, int nb_tokens, dir_info *d)
+typedef struct
 {
-    if (strcmp(cmd->content[0], "exit") == 0)
-    {
-        exit(0); // for now
-    }
-    else if (strcmp(cmd->content[0], "cd") == 0)
-    {
-        cd(cmd->content, d, nb_tokens);
-        return 0;
-    }
-    else if (strcmp(cmd->content[0], "clear") == 0)
-    {
-        clear();
-        return 0;
-    }
-    else
-    {
-        char *argv;
-        fetch_bin(cmd->content[0], argv);
-    }
+    Cmd *cmd;
+    int nb_token;
+    dir_info *d;
+} ThreadArgs;
+
+void *thread_func(void *arg)
+{
+    ThreadArgs *args = (ThreadArgs *)arg;
+    int res = parse_command(args->cmd, args->nb_token, args->d);
+    // Do something with res if needed
+    free(args); // Don't forget to free the allocated memory
+    return NULL;
 }
 
-Cmd *store_command(char *cmd, size_t input_size, int *nb_token)
-{
 
-    char **tokens = NULL;
-    char buffer[MAX_BUFFER];
-    int buffer_index = 0;
-    int index = 0;
-    *nb_token = 0; // Initialize nb_token to zero*
+int main() {
+    setup_env(); // Set up config files
 
-    while (cmd[index] != '\0')
-    {
-        char currentChar = cmd[index];
-
-        if (isspace(currentChar))
-        {
-            index++;
-            continue;
-        }
-        if (IS_PIPE_OPRATOR(currentChar))
-        {
-            buffer[buffer_index] = currentChar;
-            buffer[buffer_index + 1] = '\0'; // Null-terminate the buffer
-            tokens = realloc(tokens, (*nb_token + 1) * sizeof(char *));
-            tokens[*nb_token] = strdup(buffer);
-            buffer_index = 0;
-            buffer[buffer_index] = '\0';
-            (*nb_token)++;
-            index++;
-            continue;
-        }
-        if (isalpha(currentChar) || currentChar == '.' || currentChar == '/' || currentChar == '-' || currentChar == '_' || currentChar == '~')
-        {
-            while (isalnum(cmd[index]) || cmd[index] == '_' || cmd[index] == '.' || cmd[index] == '-' || cmd[index] == '_' || cmd[index] == '/' || cmd[index] == '~')
-            {
-                buffer[buffer_index++] = cmd[index++];
-            }
-            buffer[buffer_index] = '\0';
-
-            tokens = realloc(tokens, (*nb_token + 1) * sizeof(char *));
-            tokens[*nb_token] = strdup(buffer);
-            buffer_index = 0;
-            buffer[buffer_index] = '\0';
-            (*nb_token)++;
-            continue;
-        }
- 
-        index++;
-    }
-
-    Cmd *command = malloc(sizeof(Cmd));
-    command->content = malloc((*nb_token) * sizeof(char *));
-    for (int i = 0; i < (*nb_token); i++)
-    {
-        command->content[i] = strdup(tokens[i]);
-    }
-
-    time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
-    command->time = tm;
-
-    free(tokens);  
-    return command;
-}
-
-int main()
-{
-    char *input = NULL;
-    size_t input_size = 0;
-    ssize_t read_bytes;
+    int history_index = 0;
     int nb_token = 0;
-    char *k_word = NULL;
+    size_t path_size = pathconf(".", _PC_PATH_MAX);
 
     dir_info *d = malloc(sizeof(dir_info));
-    size_t path_size = pathconf(".", _PC_PATH_MAX);
-    char buffer[path_size];
-
-    d->cur_dir = (char *)malloc((size_t)path_size);
-    if (d->cur_dir == NULL)
-    {
+    if (!d || !(d->cur_dir = (char *)malloc(path_size))) {
         perror("malloc failed");
+        free(d);
         exit(EXIT_FAILURE);
     }
-    while (1)
-    {
 
-        if (getcwd(d->cur_dir, path_size) == NULL)
-        {
-            perror("Impossible d'obtenir le répertoire de travail actuel");
+    char input[256]; // Input buffer
+
+    while (1) {
+        if (getcwd(d->cur_dir, path_size) == NULL) {
+            perror("Unable to get current working directory");
+            free(d->cur_dir);
+            free(d);
             exit(EXIT_FAILURE);
         }
-        fprintf(stdout, "%s ", d->cur_dir);
-        fprintf(stdout, " > ");
+        printf("%s > ", d->cur_dir); // Print prompt
 
-        read_bytes = getline(&input, &input_size, stdin);
-
-        if (read_bytes == -1)
-        {
-            perror("getline");
-            exit(EXIT_FAILURE);
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            // Handle input error or EOF
+            break;
         }
 
-        if (read_bytes > 0 && input[read_bytes - 1] == '\n')
-        {
-            input[read_bytes - 1] = '\0';
-            read_bytes--;
+        if (input[strlen(input) - 1] == '\n') {
+            input[strlen(input) - 1] = '\0'; // Remove newline character
         }
 
-        if (read_bytes == 0)
-        {
+        if (strlen(input) == 0) {
             continue;
         }
-        Cmd *cmd = store_command(input, input_size, &nb_token);
-        int res = parse_command(cmd, nb_token, d);
-        if (res != 0)
-        {
-            perror("xhell: wrong commands");
+
+        Cmd *cmd = store_command(input, strlen(input), &nb_token);
+
+        pthread_t thread_id;
+        ThreadArgs *args = malloc(sizeof(ThreadArgs));
+        if (!args) {
+            perror("Failed to allocate memory for thread arguments");
+            // Handle error...
+            break;
         }
 
-        for (int i = 0; i < nb_token; i++)
-        {
+        // Set up arguments for the thread
+        args->cmd = cmd;
+        args->nb_token = nb_token;
+        args->d = d;
+
+        // Create the thread
+        if (pthread_create(&thread_id, NULL, thread_func, args) != 0) {
+            perror("Failed to create thread");
+            // Handle error...
+            break;
+        }
+
+        // Wait for the thread to complete
+        pthread_join(thread_id, NULL);
+
+        // Free the command structure
+        for (int i = 0; i < nb_token; i++) {
             free(cmd->content[i]);
         }
         free(cmd->content);
         free(cmd);
     }
+
+    // Clean-up
     free(d->cur_dir);
     free(d);
 
-    free(input);
-
     return 0;
 }
- 
