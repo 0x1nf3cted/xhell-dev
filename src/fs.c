@@ -5,6 +5,14 @@ static char **split_string(char *cmd, int *nb_token);
 int parse_command(Cmd *cmd, dir_info *d)
 {
 
+    FILE *file = read_or_write("a+");
+
+    fprintf(file, "%s ", cmd->cont);
+
+    fprintf(file, "\n");
+
+    fclose(file);
+
     int nb_token = 0;
     char **tokens = split_string(cmd->cont, &nb_token);
 
@@ -146,9 +154,7 @@ int store_command(Cmd *cmd, char *n_cmd)
     }
     cmd->c_pos = 0;
     cmd->length = 0;
-
     strcpy(cmd->cont, n_cmd);
-
     return 0;
 }
 
