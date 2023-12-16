@@ -60,6 +60,7 @@ int main()
     size_t path_size = pathconf(".", _PC_PATH_MAX);
 
     dir_info *d = malloc(sizeof(dir_info));
+    d->index = 0;
     if (!d || !(d->cur_dir = (char *)malloc(path_size)))
     {
         perror("malloc failed");
@@ -112,19 +113,19 @@ int main()
                         {
                             if (c == 'A')
                             {
-                                insert_key_press(57, cmd);
+                                insert_key_press(57, cmd, d);
                             }
                             else if (c == 'B')
                             {
-                                insert_key_press(80, cmd);
+                                insert_key_press(80, cmd, d);
                             }
                             else if (c == 'C')
                             {
-                                insert_key_press(77, cmd);
+                                insert_key_press(77, cmd, d);
                             }
                             else if (c == 'D')
                             {
-                                insert_key_press(75, cmd);
+                                insert_key_press(75, cmd, d);
                             }
                         }
 
@@ -139,6 +140,7 @@ int main()
 
                     w_command = 0;
                     printf("\n");
+                    d->index =0;
                     break;
                 }
 

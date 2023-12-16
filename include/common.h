@@ -13,7 +13,6 @@
 #include <time.h>
 #include <sys/types.h>
 #include "io.h"
- 
 
 #define MAX_BUFFER 256
 #define MAXPATH 1024
@@ -51,6 +50,7 @@ enum Keypress
 typedef struct
 {
     char *cur_dir;
+    int index;
 } dir_info;
 
 typedef struct
@@ -63,13 +63,13 @@ typedef struct
 
 void insertChar(char addedChar, Cmd *cmd, dir_info *dir);
 void addCharToBuffer(const char addedChar, Cmd *cmd, dir_info *dir);
-void insert_key_press(int key_press, Cmd *cmd);
+void insert_key_press(int key_press, Cmd *cmd, dir_info *d);
 void move_cursor(int x);
 void setup_env();
+
 int parse_command(Cmd *cmd, dir_info *d);
 void cd(char **content, dir_info *cur_dir, int nb_tokens);
-
-// Cmd *store_command(char *cmd, size_t input_size, int *nb_token);
-// char *get_command_history(int index);
-
+FILE *read_or_write(char *flag);
+int store_command(Cmd *cmd, char *n_cmd);
+void get_command_history(Cmd *cmd, dir_info *d);
 #endif /* COMMON_H */

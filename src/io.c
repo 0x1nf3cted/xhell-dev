@@ -5,16 +5,21 @@ void move_cursor(int x)
     printf("\x1b[0;%dH", x);
 }
 
-void insert_key_press(int key_press, Cmd *cmd)
+void insert_key_press(int key_press, Cmd *cmd, dir_info *d)
 {
 
     switch (key_press)
     {
 
     case UP_ARROW:
-        write(STDOUT_FILENO, "UP", 2);
-        printf("UP");
-        // get the last command
+
+        int l = get_file_len();
+        if (d->index != l - 1)
+        {
+
+            d->index += 1;
+            get_command_history(cmd, d);
+        }
         break;
     case DOWN_ARROW:
         write(STDOUT_FILENO, "DOWN", 4);
@@ -22,17 +27,17 @@ void insert_key_press(int key_press, Cmd *cmd)
         // get the next command
         break;
     case RIGHT_ARROW:
-        if (cmd->c_pos < cmd->length) // Ensure cursor is not at the end of the string
+        if (cmd->c_pos < cmd->length)
         {
-            write(STDOUT_FILENO, "\x1b[C", 3); // Move cursor right
+            write(STDOUT_FILENO, "\x1b[C", 3);
             cmd->c_pos += 1;
         }
         break;
 
     case LEFT_ARROW:
-        if (cmd->c_pos > 0) // Ensure cursor is not at the beginning of the string
+        if (cmd->c_pos > 0)
         {
-            write(STDOUT_FILENO, "\x1b[D", 3); // Move cursor left
+            write(STDOUT_FILENO, "\x1b[D", 3);
             cmd->c_pos -= 1;
         }
         break;

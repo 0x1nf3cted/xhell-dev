@@ -8,9 +8,6 @@ int parse_command(Cmd *cmd, dir_info *d)
     int nb_token = 0;
     char **tokens = split_string(cmd->cont, &nb_token);
 
-    /* the bug is here
-    it execute the command, then cause segmentation fault
-    */
     if (nb_token > 0)
     {
         if (strcmp(tokens[0], "exit") == 0)
@@ -35,7 +32,7 @@ int parse_command(Cmd *cmd, dir_info *d)
         free(tokens);
     }
 
-     return 0;
+    return 0;
 }
 static char **split_string(char *str, int *count)
 {
@@ -71,151 +68,216 @@ static char **split_string(char *str, int *count)
     tokens[*count] = NULL; // Null-terminate the array
     return tokens;
 }
-// char *get_command_history(int index)
+void get_command_history(Cmd *cmd, dir_info *d)
+{
+
+    int index = d->index;
+    FILE *file = read_or_write("a+");
+
+    char **content = NULL;
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    int line_count = 0;
+
+    while ((read = getline(&line, &len, file)) != -1)
+    {
+        // Remove newline character if present
+        if (line[read - 1] == '\n')
+        {
+            line[read - 1] = '\0';
+        }
+
+        // Allocate memory for the new line and add it to the content array
+        char **temp_content = realloc(content, sizeof(char *) * (line_count + 1));
+        if (temp_content == NULL)
+        {
+            // Handle allocation error, e.g., free allocated memory and exit
+            free_content(content, line_count);
+            free(line);
+            fclose(file);
+            perror("Failed to reallocate memory for content");
+            exit(EXIT_FAILURE);
+        }
+        content = temp_content;
+        content[line_count] = strdup(line); // strdup allocates memory and copies the string
+        (line_count)++;
+    }
+
+    free(line); // Free the buffer allocated by getline
+    fclose(file);
+
+    write(STDOUT_FILENO, "\x1b[2K", 4);
+    write(STDOUT_FILENO, "\r", 1);
+    if (d->cur_dir)
+    {
+        printf("%s > ", d->cur_dir);
+    }
+    int access_index = line_count - index;
+    if (access_index < 0 || access_index >= line_count)
+    {
+        printf("Invalid index.\n");
+    }
+    else
+    {
+        printf("%s", content[access_index]);
+        store_command(cmd, content[access_index]);
+    }
+    free_content(content, line_count);
+}
+
+void free_content(char **content, int line_count)
+{
+    for (int i = 0; i < line_count; i++)
+    {
+        free(content[i]);
+    }
+    free(content);
+}
+
+int store_command(Cmd *cmd, char *n_cmd)
+{
+    free(cmd->cont);
+    cmd->cont = (char *)malloc(256 * sizeof(char));
+    if (cmd->cont == NULL)
+    {
+        perror("Failed to allocate memory for cmd->cont");
+        exit(EXIT_FAILURE);
+    }
+    cmd->c_pos = 0;
+    cmd->length = 0;
+
+    strcpy(cmd->cont, n_cmd);
+
+    return 0;
+}
+
+int get_file_len()
+{
+    FILE *file = read_or_write("r");
+    int ch, n_lines = 0;
+    do
+    {
+        ch = fgetc(file);
+        if (ch == '\n')
+        {
+            n_lines++;
+        }
+    } while (ch != EOF);
+    if (ch != '\n' && n_lines != 0)
+    {
+        n_lines++;
+    }
+    fclose(file);
+    return n_lines;
+}
+
+FILE *read_or_write(char *flag)
+{
+    char *home = getenv("HOME");
+    if (home == NULL)
+    {
+        fprintf(stderr, "La variable d'environnement HOME n'est pas définie.\n");
+        exit(1);
+    }
+
+    char filename[256];
+    snprintf(filename, sizeof(filename), "%s/.config/xhell/xhell_history.txt", home);
+
+    FILE *file = fopen(filename, flag);
+    if (file == NULL)
+    {
+        perror("Impossible d'ouvrir ou de créer le fichier");
+        exit(1);
+    }
+    return file;
+}
+
+// Cmd *store_command(char *cmd, size_t input_size, int *nb_token)
 // {
 
-//     const char *home_directory = getenv("HOME");
-//     char resolved_file[MAXPATH];
+//     char **tokens = NULL;
+//     char buffer[MAX_BUFFER];
+//     int buffer_index = 0;
+//     int index = 0;
+//     *nb_token = 0;
 
-//     if (home_directory == NULL)
+//     while (cmd[index] != '\0')
 //     {
-//         fprintf(stderr, "Error: HOME environment variable not set.\n");
-//         return;
-//     }
+//         char currentChar = cmd[index];
 
-//     snprintf(resolved_file, sizeof(resolved_file), "%s/.config/xhell/xhell_history.txt", home_directory);
-
-//     FILE *file = fopen(resolved_file, "r");
-//     if (!file)
-//     {
-//         perror("Error opening file");
-//         return NULL;
-//     }
-
-//     char **content = NULL;
-//     char *line = NULL;
-//     size_t len = 0;
-//     ssize_t read;
-//     int line_count = 0;
-
-//     while ((read = getline(&line, &len, file)) != -1)
-//     {
-//         // Remove newline character if present
-//         if (line[read - 1] == '\n')
+//         if (isspace(currentChar))
 //         {
-//             line[read - 1] = '\0';
+//             index++;
+//             continue;
+//         }
+//         if (IS_PIPE_OPRATOR(currentChar))
+//         {
+//             buffer[buffer_index] = currentChar;
+//             buffer[buffer_index + 1] = '\0';
+//             tokens = realloc(tokens, (*nb_token + 1) * sizeof(char *));
+//             tokens[*nb_token] = strdup(buffer);
+//             buffer_index = 0;
+//             buffer[buffer_index] = '\0';
+//             (*nb_token)++;
+//             index++;
+//             continue;
+//         }
+//         if (isalpha(currentChar) || currentChar == '.' || currentChar == '/' || currentChar == '-' || currentChar == '_' || currentChar == '~')
+//         {
+//             while (isalnum(cmd[index]) || cmd[index] == '_' || cmd[index] == '.' || cmd[index] == '-' || cmd[index] == '_' || cmd[index] == '/' || cmd[index] == '~')
+//             {
+//                 buffer[buffer_index++] = cmd[index++];
+//             }
+//             buffer[buffer_index] = '\0';
+
+//             tokens = realloc(tokens, (*nb_token + 1) * sizeof(char *));
+//             tokens[*nb_token] = strdup(buffer);
+//             buffer_index = 0;
+//             buffer[buffer_index] = '\0';
+//             (*nb_token)++;
+//             continue;
 //         }
 
-//         // Allocate memory for the new line and add it to the content array
-//         content = realloc(content, sizeof(char *) * (line_count + 1));
-//         content[line_count] = strdup(line); // strdup allocates memory and copies the string
-//         (line_count)++;
+//         index++;
 //     }
 
-//     free(line); // Free the buffer allocated by getline
+//     Cmd *command = malloc(sizeof(Cmd));
+//     command->content = malloc((*nb_token) * sizeof(char *));
+//     for (int i = 0; i < (*nb_token); i++)
+//     {
+//         command->content[i] = strdup(tokens[i]);
+//     }
+
+//     free(tokens);
+
+//     char *home = getenv("HOME");
+//     if (home == NULL)
+//     {
+//         fprintf(stderr, "La variable d'environnement HOME n'est pas définie.\n");
+//         exit(1);
+//     }
+
+//     char filename[256];
+//     snprintf(filename, sizeof(filename), "%s/.config/xhell/xhell_history.txt", home);
+
+//     FILE *file = fopen(filename, "a+");
+//     if (file == NULL)
+//     {
+//         perror("Impossible d'ouvrir ou de créer le fichier");
+//         exit(1);
+//     }
+
+//     for (int i = 0; i < *nb_token; i++)
+//     {
+//         fprintf(file, "%s ", command->content[i]);
+//     }
+//     fprintf(file, "\n");
+
 //     fclose(file);
 
-//     return content[line_count - index];
+//     return command;
 // }
-
-// void free_content(char **content, int line_count)
-// {
-//     for (int i = 0; i < line_count; i++)
-//     {
-//         free(content[i]);
-//     }
-//     free(content);
-// }
-
-// // Cmd *store_command(char *cmd, size_t input_size, int *nb_token)
-// // {
-
-// //     char **tokens = NULL;
-// //     char buffer[MAX_BUFFER];
-// //     int buffer_index = 0;
-// //     int index = 0;
-// //     *nb_token = 0;
-
-// //     while (cmd[index] != '\0')
-// //     {
-// //         char currentChar = cmd[index];
-
-// //         if (isspace(currentChar))
-// //         {
-// //             index++;
-// //             continue;
-// //         }
-// //         if (IS_PIPE_OPRATOR(currentChar))
-// //         {
-// //             buffer[buffer_index] = currentChar;
-// //             buffer[buffer_index + 1] = '\0';
-// //             tokens = realloc(tokens, (*nb_token + 1) * sizeof(char *));
-// //             tokens[*nb_token] = strdup(buffer);
-// //             buffer_index = 0;
-// //             buffer[buffer_index] = '\0';
-// //             (*nb_token)++;
-// //             index++;
-// //             continue;
-// //         }
-// //         if (isalpha(currentChar) || currentChar == '.' || currentChar == '/' || currentChar == '-' || currentChar == '_' || currentChar == '~')
-// //         {
-// //             while (isalnum(cmd[index]) || cmd[index] == '_' || cmd[index] == '.' || cmd[index] == '-' || cmd[index] == '_' || cmd[index] == '/' || cmd[index] == '~')
-// //             {
-// //                 buffer[buffer_index++] = cmd[index++];
-// //             }
-// //             buffer[buffer_index] = '\0';
-
-// //             tokens = realloc(tokens, (*nb_token + 1) * sizeof(char *));
-// //             tokens[*nb_token] = strdup(buffer);
-// //             buffer_index = 0;
-// //             buffer[buffer_index] = '\0';
-// //             (*nb_token)++;
-// //             continue;
-// //         }
-
-// //         index++;
-// //     }
-
-// //     Cmd *command = malloc(sizeof(Cmd));
-// //     command->content = malloc((*nb_token) * sizeof(char *));
-// //     for (int i = 0; i < (*nb_token); i++)
-// //     {
-// //         command->content[i] = strdup(tokens[i]);
-// //     }
-
-// //     time_t t = time(NULL);
-// //     struct tm tm = *localtime(&t);
-// //     command->time = tm;
-
-// //     free(tokens);
-
-// //     char *home = getenv("HOME");
-// //     if (home == NULL)
-// //     {
-// //         fprintf(stderr, "La variable d'environnement HOME n'est pas définie.\n");
-// //         exit(1);
-// //     }
-
-// //     char filename[256];
-// //     snprintf(filename, sizeof(filename), "%s/.config/xhell/xhell_history.txt", home);
-
-// //     FILE *file = fopen(filename, "a+");
-// //     if (file == NULL)
-// //     {
-// //         perror("Impossible d'ouvrir ou de créer le fichier");
-// //         exit(1);
-// //     }
-
-// //     for (int i = 0; i < *nb_token; i++)
-// //     {
-// //         fprintf(file, "%s ", command->content[i]);
-// //     }
-// //     fprintf(file, "\n");
-
-// //     fclose(file);
-
-// //     return command;
-// // }
 
 void setup_env()
 {
