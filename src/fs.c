@@ -8,29 +8,34 @@ int parse_command(Cmd *cmd, dir_info *d)
     int nb_token = 0;
     char **tokens = split_string(cmd->cont, &nb_token);
 
+    /* the bug is here
+    it execute the command, then cause segmentation fault
+    */
+    if (nb_token > 0)
+    {
+        if (strcmp(tokens[0], "exit") == 0)
+        {
+            exit(0); // for now
+        }
+        else if (strcmp(tokens[0], "cd") == 0)
+        {
+            cd(tokens, d, nb_token);
+            return 0;
+        }
+        else if (strcmp(tokens[0], "clear") == 0)
+        {
+            clear();
+            return 0;
+        }
+        else
+        {
+            char *argv;
+            fetch_bin(tokens[0], argv);
+        }
+        free(tokens);
+    }
 
-/* the bug is here
-it execute the command, then cause segmentation fault
-*/
-    if (strcmp(tokens[0], "exit") == 0)
-    {
-        exit(0); // for now
-    }
-    else if (strcmp(tokens[0], "cd") == 0)
-    {
-        cd(tokens, d);
-        return 0;
-    }
-    else if (strcmp(tokens[0], "clear") == 0)
-    {
-        clear();
-        return 0;
-    }
-    else
-    {
-        char *argv;
-        fetch_bin(tokens[0], argv);
-    }
+     return 0;
 }
 static char **split_string(char *str, int *count)
 {
@@ -63,6 +68,7 @@ static char **split_string(char *str, int *count)
         token = strtok(NULL, " ");
     }
 
+    tokens[*count] = NULL; // Null-terminate the array
     return tokens;
 }
 // char *get_command_history(int index)

@@ -72,10 +72,18 @@ int main()
     Cmd *cmd = (Cmd *)malloc(sizeof(Cmd));
     cmd->c_pos = 0;
     cmd->length = 0;
-    cmd->cont = (char *)malloc(sizeof(char));
-    strcpy(cmd->cont, "");
+    cmd->cont = (char *)malloc(256 * sizeof(char));
+    if (cmd->cont == NULL)
+    {
+        perror("Failed to allocate memory for cmd->cont");
+        exit(EXIT_FAILURE);
+    }
+
     while (1)
     {
+
+        strcpy(cmd->cont, "");
+
         if (getcwd(d->cur_dir, path_size) == NULL)
         {
             perror("Unable to get current working directory");
@@ -140,11 +148,19 @@ int main()
                 }
             }
         }
-        cmd = parse_command(cmd, d);
-        memset(cmd->cont, '\0', cmd->length);
+        parse_command(cmd, d);
+
+        // memset(cmd->cont, '\0', cmd->length);
+        free(cmd->cont);
+        cmd->cont = (char *)malloc(256 * sizeof(char));
+        if (cmd->cont == NULL)
+        {
+            perror("Failed to allocate memory for cmd->cont");
+            exit(EXIT_FAILURE);
+        }
         cmd->c_pos = 0;
         cmd->length = 0;
-     }
+    }
 
     // cmd = store_command(input, strlen(input), &nb_token);
 

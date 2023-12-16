@@ -10,8 +10,6 @@
 #include <ctype.h>
 #include <unistd.h>
 #include "common.h"
- 
 
-// void cd(char **content,  int nb_tokens,dir_info *cur_dir);
 
 #endif /* LOCAL_H */

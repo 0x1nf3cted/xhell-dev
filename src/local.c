@@ -1,4 +1,4 @@
-#include "local.h"
+#include "common.h"
 
 void remove_last(char *path)
 {
