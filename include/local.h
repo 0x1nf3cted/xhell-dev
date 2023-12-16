@@ -8,9 +8,10 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <ctype.h>
-#include "common.h"
 #include <unistd.h>
+#include "common.h"
+ 
 
-void cd(char **content, dir_info *cur_dir, int nb_tokens);
+// void cd(char **content,  int nb_tokens,dir_info *cur_dir);
 
 #endif /* LOCAL_H */

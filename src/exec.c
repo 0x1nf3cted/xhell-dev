@@ -51,10 +51,10 @@ int fetch_bin(char *bin, char *arg[])
                 pid_t p = fork();
                 if (p < 0)
                 {
-                    perror("fork failed");
+                    perror("can't instantiate a new process");
                     return -1;
                 }
-                else if (p == 0)
+                else if (p == 0) // we're in child processus
                 {
                     char *const argv[] = {binary_p, NULL};
                     execvp(binary_p, argv);
@@ -71,7 +71,7 @@ int fetch_bin(char *bin, char *arg[])
                     }
 
                     found = 1;
-                    break;  
+                    break;
                 }
             }
         }
