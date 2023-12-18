@@ -6,13 +6,15 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <ncurses.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
 #include <sys/types.h>
-#include "io.h"
+
+
 
 #define MAX_BUFFER 256
 #define MAXPATH 1024
@@ -66,7 +68,6 @@ void addCharToBuffer(const char addedChar, Cmd *cmd, dir_info *dir);
 void insert_key_press(int key_press, Cmd *cmd, dir_info *d);
 void move_cursor(int x);
 void setup_env();
-
 int parse_command(Cmd *cmd, dir_info *d);
 void cd(char **content, dir_info *cur_dir, int nb_tokens);
 FILE *read_or_write(char *flag);

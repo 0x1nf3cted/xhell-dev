@@ -10,8 +10,6 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include "common.h"
-#include "local.h"
-#include "exec.h"
 #include "completions.h"
 
 typedef struct
@@ -140,7 +138,7 @@ int main()
 
                     w_command = 0;
                     printf("\n");
-                    d->index =0;
+                    d->index = 0;
                     break;
                 }
 
@@ -150,11 +148,12 @@ int main()
                 }
             }
         }
+
         parse_command(cmd, d);
 
         // memset(cmd->cont, '\0', cmd->length);
         free(cmd->cont);
-        cmd->cont = (char *)malloc(256 * sizeof(char));
+        cmd->cont = (char *)malloc(sizeof(char));
         if (cmd->cont == NULL)
         {
             perror("Failed to allocate memory for cmd->cont");

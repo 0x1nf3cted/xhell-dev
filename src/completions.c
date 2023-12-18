@@ -15,6 +15,7 @@ char *text_completion(char *key_word, char *path)
             break;
         }
     }
+    
     k = (char *)malloc(sizeof(char));
 
     if (bound == 0)

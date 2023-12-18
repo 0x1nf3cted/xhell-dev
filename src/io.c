@@ -1,9 +1,9 @@
 #include "common.h"
 
-void move_cursor(int x)
-{
-    printf("\x1b[0;%dH", x);
-}
+// void move_cursor(int x)
+// {
+//     printf("\x1b[0;%dH", x);
+// }
 
 void insert_key_press(int key_press, Cmd *cmd, dir_info *d)
 {
@@ -16,15 +16,16 @@ void insert_key_press(int key_press, Cmd *cmd, dir_info *d)
         int l = get_file_len();
         if (d->index != l - 1)
         {
-
             d->index += 1;
             get_command_history(cmd, d);
         }
         break;
     case DOWN_ARROW:
-        write(STDOUT_FILENO, "DOWN", 4);
-
-        // get the next command
+        if (d->index > 0)
+        {
+            d->index -= 1;
+            get_command_history(cmd, d);
+        }
         break;
     case RIGHT_ARROW:
         if (cmd->c_pos < cmd->length)
@@ -76,29 +77,74 @@ void insertChar(char addedChar, Cmd *cmd, dir_info *dir)
     }
 }
 
+
+void remove_char(Cmd *cmd, dir_info *dir)
+{
+    if (cmd->length > 0 && cmd->c_pos > 0)
+    {
+        cmd->length--;
+        cmd->c_pos--;
+
+        memmove(cmd->cont + cmd->c_pos, cmd->cont + cmd->c_pos + 1, cmd->length - cmd->c_pos);
+
+        char *new_cont = realloc(cmd->cont, (cmd->length + 1) * sizeof(char));
+        if (new_cont == NULL)
+        {
+            perror("Failed to allocate memory for cmd->cont");
+            exit(EXIT_FAILURE);
+        }
+        cmd->cont = new_cont;
+
+        cmd->cont[cmd->length] = '\0';
+
+        // write(STDOUT_FILENO, "\x1b[2K", 4);
+        write(STDOUT_FILENO, "\r", 1);
+
+        if (dir && dir->cur_dir)
+        {
+            printf("%s > ", dir->cur_dir);
+        }
+
+        write(STDOUT_FILENO, cmd->cont, cmd->length);
+
+        printf("\x1b[%dG", cmd->c_pos + (dir && dir->cur_dir ? strlen(dir->cur_dir) + 3 : 0));
+
+        fflush(stdout);
+    }
+}
+
 void addCharToBuffer(const char addedChar, Cmd *cmd, dir_info *dir)
 {
+
     if (cmd == NULL)
     {
         perror("Null command pointer");
         return;
     }
 
-    size_t l = cmd->length;
-
-    // Directly reallocate cmd->cont
-    cmd->cont = realloc(cmd->cont, (l + 2) * sizeof(char));
-    if (cmd->cont == NULL)
+    if (dir == NULL)
     {
-        perror("Allocation error");
-        // Handle the error, e.g., by returning, but do not exit if you want to preserve the data.
+        perror("Null directory info pointer");
         return;
     }
 
-    cmd->cont[l] = addedChar;
-    cmd->cont[l + 1] = '\0';
-    cmd->length += 1;
+    int l = cmd->c_pos;
 
+    char *new_cont = realloc(cmd->cont, (cmd->length + 2) * sizeof(char));
+    if (new_cont == NULL)
+    {
+        perror("Allocation error");
+        return;
+    }
+
+    cmd->cont = new_cont;
+
+    memmove(cmd->cont + l + 1, cmd->cont + l, cmd->length - l + 1);
+
+    cmd->cont[l] = addedChar;
+    cmd->c_pos += 1;
+    cmd->length += 1;
+    cmd->cont[cmd->length] = '\0';
     write(STDOUT_FILENO, "\x1b[2K", 4);
     write(STDOUT_FILENO, "\r", 1);
 
@@ -106,7 +152,9 @@ void addCharToBuffer(const char addedChar, Cmd *cmd, dir_info *dir)
     {
         printf("%s > ", dir->cur_dir);
     }
+
     write(STDOUT_FILENO, cmd->cont, cmd->length);
 
-    cmd->c_pos = cmd->length;
+    printf("\x1b[%dG", cmd->c_pos + (dir->cur_dir ? strlen(dir->cur_dir) + 4 : 0));
+
 }

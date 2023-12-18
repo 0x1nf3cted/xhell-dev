@@ -1,4 +1,4 @@
-#include "exec.h"
+#include "common.h"
 
 int fetch_bin(char *bin, char *arg[])
 {
@@ -59,12 +59,12 @@ int fetch_bin(char *bin, char *arg[])
                     char *const argv[] = {binary_p, NULL};
                     execvp(binary_p, argv);
                     perror("execvp failed");
-                    exit(1);
+                    exit(0);
                 }
                 else
                 {
                     int status;
-                    waitpid(p, &status, 0); // Wait for the child process to finish
+                    waitpid(p, &status, 0); 
                     if (WIFEXITED(status) == NULL || WEXITSTATUS(status) != 0)
                     {
                         printf("Child process encountered an error or was killed.\n");

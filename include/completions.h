@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
-#include "local.h"
 
 
 char *text_completion(char *key_word, char *path);
