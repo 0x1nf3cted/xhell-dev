@@ -19,14 +19,7 @@ typedef struct
     dir_info *d;
 } ThreadArgs;
 
-// void *thread_func(void *arg)
-// {
-//     ThreadArgs *args = (ThreadArgs *)arg;
-//     int res = parse_command(args->cmd, args->nb_token, args->d);
-//     // Do something with res if needed
-//     free(args); // Don't forget to free the allocated memory
-//     return NULL;
-// }
+ 
 
 void enableRawMode(struct termios *origTermios)
 {
@@ -148,8 +141,10 @@ int main()
                 }
             }
         }
-
-        parse_command(cmd, d);
+        int nb = 0;
+        Node* n = parse_command_node(cmd, &nb);
+        print_ast(n);
+        //parse_command(cmd, d);
 
         // memset(cmd->cont, '\0', cmd->length);
         free(cmd->cont);
@@ -163,45 +158,11 @@ int main()
         cmd->length = 0;
     }
 
-    // cmd = store_command(input, strlen(input), &nb_token);
-
-    // pthread_t thread_id;
-    // ThreadArgs *args = malloc(sizeof(ThreadArgs));
-    // if (!args)
-    // {
-    //     perror("Failed to allocate memory for thread arguments");
-    //     // Handle error...
-    //     break;
-    // }
-
-    // // Set up arguments for the thread
-    // args->cmd = cmd;
-    // args->nb_token = nb_token;
-    // args->d = d;
-
-    // // Create the thread
-    // if (pthread_create(&thread_id, NULL, thread_func, args) != 0)
-    // {
-    //     perror("Failed to create thread");
-    //     // Handle error...
-    //     break;
-    // }
-
-    // // Wait for the thread to complete
-    // pthread_join(thread_id, NULL);
-
-    // // Free the command structure
-    // for (int i = 0; i < nb_token; i++)
-    // {
-    //     free(cmd->content[i]);
-    // }
-    // free(cmd->content);
-    // free(cmd);
+   
 
     disableRawMode(&origTermios);
 
-    // Clean-up
-    free(d->cur_dir);
+     free(d->cur_dir);
     free(d);
 
     return 0;

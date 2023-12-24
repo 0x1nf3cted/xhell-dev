@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <math.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <ncurses.h>
@@ -63,6 +64,49 @@ typedef struct
 
 } Cmd;
 
+enum NodeType
+{
+    COMMAND_NODE,
+    PATH_NODE,
+    ARG_NODE,
+    SYMBOL_NODE,
+    VARIABLE_TYPE,
+    PIPE_NODE,
+    REDIRECT_OUTPUT_NODE,
+    REDIRECT_INPUT_NODE,
+    APPEND_OUTPUT_NODE,
+    APPEND_INPUT_NODE,
+    TEE_NODE,
+    APPEND_ERROR_NODE,
+    REDIRECT_IO_NODE,
+    REDIRECT_ERROR_NODE,
+    APPEND_IO_ERROR_NODE,
+};
+
+union node_val_type
+{
+    long sint;
+    unsigned long uint;
+    long long sllong;
+    unsigned long long ullong;
+    double sfloat;
+    long double ldouble;
+    char chr;
+    char *str;
+};
+
+struct Node
+{
+    char *node_content;
+    union node_val_type v_node_type;
+    enum NodeType node_type;
+    int pos;
+    struct Node *next;
+    struct Node *before;
+};
+typedef struct Node Node;
+
+
 void insertChar(char addedChar, Cmd *cmd, dir_info *dir);
 void addCharToBuffer(const char addedChar, Cmd *cmd, dir_info *dir);
 void insert_key_press(int key_press, Cmd *cmd, dir_info *d);
@@ -73,4 +117,11 @@ void cd(char **content, dir_info *cur_dir, int nb_tokens);
 FILE *read_or_write(char *flag);
 int store_command(Cmd *cmd, char *n_cmd);
 void get_command_history(Cmd *cmd, dir_info *d);
+Node *create_node(const char *content, enum NodeType type);
+enum NodeType determine_node_type(const char *token);
+Node *parse_command_node(Cmd *cmd, int *nb_token);
+void print_ast(Node *current);
+
+
+
 #endif /* COMMON_H */
