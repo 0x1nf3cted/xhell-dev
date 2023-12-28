@@ -11,7 +11,14 @@
 #include "local.h"
 #include <sys/wait.h> // for waitpid
 #include <unistd.h>   // for fork, execvp
-    
+
+/**
+ * @brief
+ * 
+ * @param bin 
+ * @param arg 
+ * @return int 
+ */
 int fetch_bin(char *bin, char* arg[]);
 
 #endif /* EXEC_H */

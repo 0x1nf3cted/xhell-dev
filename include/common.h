@@ -14,8 +14,6 @@
 #include <time.h>
 #include <sys/types.h>
 
-
-
 #define MAX_BUFFER 256
 #define MAXPATH 1024
 #define clear() printf("\033[H\033[J")
@@ -63,14 +61,82 @@ typedef struct
 
 } Cmd;
 
+/**
+ * @brief Inserts a character
+ *
+ * @param addedChar
+ * @param cmd
+ * @param dir
+ */
 void insertChar(char addedChar, Cmd *cmd, dir_info *dir);
+
+/**
+ * @brief Adds character to buffer
+ *
+ * @param addedChar
+ * @param cmd
+ * @param dir
+ */
 void addCharToBuffer(const char addedChar, Cmd *cmd, dir_info *dir);
+
+/**
+ * @brief Inserts key press to manipulate shell input
+ *
+ * @param key_press
+ * @param cmd
+ * @param d
+ */
 void insert_key_press(int key_press, Cmd *cmd, dir_info *d);
+
 void move_cursor(int x);
+
+/**
+ * @brief Set the Xhell environment within terminal
+ *
+ */
 void setup_env();
+
+/**
+ * @brief Parses Command from buffer input
+ *
+ * @param cmd
+ * @param d
+ * @return int
+ */
 int parse_command(Cmd *cmd, dir_info *d);
+
+/**
+ * @brief Changes directory (CD)
+ *
+ * @param content
+ * @param cur_dir
+ * @param nb_tokens
+ */
 void cd(char **content, dir_info *cur_dir, int nb_tokens);
+
+/**
+ * @brief Manipulates a file and returns file pointer
+ *
+ * @param flag
+ * @return FILE*
+ */
 FILE *read_or_write(char *flag);
+
+/**
+ * @brief Stores previous command
+ *
+ * @param cmd
+ * @param n_cmd
+ * @return int
+ */
 int store_command(Cmd *cmd, char *n_cmd);
+
+/**
+ * @brief Get command history using the stored commands
+ *
+ * @param cmd
+ * @param d
+ */
 void get_command_history(Cmd *cmd, dir_info *d);
+
 #endif /* COMMON_H */
