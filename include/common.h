@@ -13,10 +13,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/types.h>
+#include <limits.h>
 
 #define MAX_BUFFER 256
-#define MAXPATH 1024
-#define clear() printf("\033[H\033[J")
 
 #define CHECK_MEMORY(ptr)                                                               \
     do                                                                                  \
