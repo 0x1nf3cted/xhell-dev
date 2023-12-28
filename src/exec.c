@@ -2,15 +2,15 @@
 
 int fetch_bin(char *bin, char *arg[])
 {
-    char sPath[MAXPATH] = "";
-    char binary_p[MAXPATH] = "";
+    char sPath[PATH_MAX] = "";
+    char binary_p[PATH_MAX] = "";
     char *pTmp;
     char **path_list = NULL;
     int n_path = 0;
     if ((pTmp = getenv("PATH")) != NULL)
     {
-        strncpy(sPath, pTmp, MAXPATH - 1);
-        sPath[MAXPATH - 1] = '\0';  
+        strncpy(sPath, pTmp, PATH_MAX - 1);
+        sPath[PATH_MAX - 1] = '\0';  
     }
      char *token = strtok(sPath, ":");
     while (token != NULL)

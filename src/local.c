@@ -64,7 +64,7 @@ char *fixPath(const char *path)
 void cd(char **content, dir_info *cur_dir, int nb_tokens)
 {
     const char *home_dir = getenv("HOME");
-    char path[MAXPATH];
+    char path[PATH_MAX];
 
     if (nb_tokens == 1)
     {
@@ -78,7 +78,7 @@ void cd(char **content, dir_info *cur_dir, int nb_tokens)
         }
         else if (content[1][0] == '/' || content[1][0] == '.')
         {
-            strncpy(path, content[1], MAXPATH - 1);
+            strncpy(path, content[1], PATH_MAX - 1);
         }
         else
         {
@@ -86,7 +86,7 @@ void cd(char **content, dir_info *cur_dir, int nb_tokens)
         }
     }
 
-    char resolved_path[MAXPATH];
+    char resolved_path[PATH_MAX];
     if (realpath(path, resolved_path) == NULL)
     {
         perror("Error resolving path");
@@ -106,7 +106,7 @@ void cd(char **content, dir_info *cur_dir, int nb_tokens)
         return;
     }
 
-    if (getcwd(cur_dir->cur_dir, MAXPATH) == NULL)
+    if (getcwd(cur_dir->cur_dir, PATH_MAX) == NULL)
     {
         perror("Error getting current working directory");
         return;
