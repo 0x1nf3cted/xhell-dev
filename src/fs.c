@@ -291,8 +291,8 @@ void setup_env()
     const char *file_path = "~/.config/xhell/xhell_history.txt";
 
     const char *home_directory = getenv("HOME");
-    char resolved_directory[MAXPATH];
-    char resolved_file[MAXPATH];
+    char resolved_directory[PATH_MAX];
+    char resolved_file[PATH_MAX];
 
     if (home_directory == NULL)
     {
