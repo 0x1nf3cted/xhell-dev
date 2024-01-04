@@ -36,99 +36,137 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <string.h>
+#include <termios.h>
 
-#define MAX_JOBS 10
-#define MAX_INPUT 100
-
-static int jobCounter;
-
-typedef struct
+/* A process is a single process */
+typedef struct process
 {
-    pid_t pid;
-    int job_id;
-    char command[MAX_INPUT];
-} Job;
+  struct process *next; /* next process in pipeline */
+  char **argv;          /* for exec */
+  pid_t pid;            /* process ID */
+  char completed;       /* true if process has completed */
+  char stopped;         /* true if process has stopped */
+  int status;           /* reported status value */
+} process;
+
+/* A job is a pipeline of processes.  */
+typedef struct job
+{
+  struct job *next;          /* next active job */
+  char *command;             /* command line, used for messages */
+  process *first_process;    /* list of processes in this job */
+  pid_t pgid;                /* process group ID */
+  char notified;             /* true if user told about stopped job */
+  struct termios tmodes;     /* saved terminal modes */
+  int stdin, stdout, stderr; /* standard i/o channels */
+} job;
+
+/* The active jobs are linked into a list. Below is the head. (Of the linked list) */
+job *first_job = NULL;
+
+/* Functions to perform operations on job objects */
 
 /**
- * @brief Creates a new job.
+ * @brief Finds a job
  *
- * @param command The command to be executed.
- * @return Job containing PID, Job ID, and the command.
+ * @param pgid
+ * @return job*
  */
-Job createJob(const char* command);
+job *find_job(pid_t pgid);
+
+/**
+ * @brief Returns true if all processes in the job are complete or stopped
+ *
+ * @param j
+ * @return int
+ */
+int job_is_stopped(job *j);
+
+/**
+ * @brief Returns true if all processes in a job are completed
+ *
+ * @param j
+ * @return int
+ */
+int job_is_completed(job *j);
+
+/**
+ * @brief Launches a process
+ *
+ * @param p
+ * @param pgid
+ * @param infile
+ * @param outfile
+ * @param errfile
+ * @param foreground
+ */
+void launch_process(process *p, pid_t pgid,
+                    int infile, int outfile, int errfile,
+                    int foreground);
 
 /**
  * @brief Runs a process as a foreground job.
  *
  * @param command The command to be executed.
- * @return Job representing the foreground job.
  */
-Job foregroundJob(const char* command);
+void foregroundJob(job *j, int cont);
 
 /**
  * @brief Runs process as background job
  *
  * @param command
- * @return Job
  */
-Job backgroundJob(const char *command);
+void backgroundJob(job *j, int cont);
 
 /**
- * @brief Handles signals related to child processes (jobs).
+ * @brief Store the status of the pid that was returned by waitpid
  *
- * @param receivedSignal The signal received.
- * @param signal_info Information about the signal.
- * @param unused_data Unused data parameter.
+ * @param pid
+ * @param status
+ * @return int
  */
-void handleSignal(int receivedSignal, siginfo_t *signal_info, void *unused_data);
+int mark_process_status(pid_t pid, int status);
 
 /**
- * @brief Handles INTERRUPT signals (CTRL+C)
+ * @brief check for statuses for information without blocking
  *
- * @param signal
  */
-void handleSIGINT(int signal);
+void update_status(void);
 
 /**
- * @brief Handles STOP signals (CTRL+Z)
+ * @brief Waits for specific job to complete and blocks all processes
  *
- * @param signal
+ * @param j
  */
-void handleSIGTSTP(int signal);
+void wait_for_job(job *j);
 
 /**
- * @brief Handles unstoppable STOP signals (CTRL+Z)
- *
- * @param signal
+ * @brief Formats job into and displays it
+ * 
+ * @param j 
+ * @param status 
  */
-void handleSIGSTOP(int signal);
+void format_job_info(job *j, const char *status);
 
 /**
- * @brief Handles TERMINATE signals
- *
- * @param command
+ * @brief Notifies user about stopped or temrinated jobs
+ * 
  */
-void handleSIGTERM(const char *command);
+void job_notification(void);
 
 /**
- * @brief Handle CONTINUE signals
+ * @brief Marks a job as running again
  *
- * @param command
+ * @param j
  */
-void handleSIGCONT(const char *command);
+void mark_job_as_running (job *j);
 
 /**
- * @brief Handle immediate KILL signals
- *
- * @param command
+ * @brief Continue a job
+ * 
+ * @param j 
+ * @param foreground 
  */
-void handleSIGKILL(const char *command);
-
-/**
- * @brief Handles HANGUP signals
- *
- * @param command
- */
-void handleSIGHUP(const char *command);
+void continue_job(job *j, int foreground);
 
 #endif /* jobcon_h */
