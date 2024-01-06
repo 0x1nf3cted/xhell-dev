@@ -47,7 +47,7 @@ void disableRawMode(struct termios *origTermios)
     tcsetattr(STDIN_FILENO, TCSANOW, origTermios);
 }
 
-int main()
+int main(void)
 {
     setup_env(); // Set up config files
     struct termios origTermios;
